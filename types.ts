@@ -1,3 +1,4 @@
+
 export enum ActivityType {
   MEAL = 'MEAL',
   EXERCISE = 'EXERCISE',
@@ -18,6 +19,16 @@ export interface PlanItem {
   isHighlight?: boolean; // Important task
 }
 
+export interface FoodItem {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  timestamp: number;
+}
+
 export interface UserProfile {
   name: string;
   age: number;
@@ -30,6 +41,7 @@ export interface UserProfile {
   sleepTime: string;
   dietaryPreferences?: string;
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active';
+  dailyCalorieGoal?: number; // Calculated BMR + Activity
 }
 
 export interface DailySummary {

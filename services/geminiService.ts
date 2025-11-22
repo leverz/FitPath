@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserProfile, PlanItem, ActivityType, ReviewResult, Language } from "../types";
+import { UserProfile, PlanItem, ActivityType, ReviewResult, Language, FoodItem } from "../types";
 import { translations } from "../translations";
 
 const apiKey = process.env.API_KEY || '';
@@ -168,5 +169,59 @@ export const reviewDayAndAdjust = async (
       feedback: lang === 'zh' ? "今天很努力！" : "Great effort today!", 
       suggestedAdjustment: lang === 'zh' ? "保持当前强度。" : "Maintain current intensity." 
     };
+  }
+};
+
+export const analyzeFood = async (text: string, lang: Language): Promise<FoodItem> => {
+  const langInstruction = lang === 'zh' 
+    ? "Output 'name' in Simplified Chinese." 
+    : "Output 'name' in English.";
+
+  const prompt = `
+    Analyze the food described here: "${text}".
+    Estimate the nutritional content.
+    Return a JSON object with:
+    - name: A short display name (e.g. "Grilled Chicken Salad")
+    - calories: number (kcal)
+    - protein: number (grams)
+    - carbs: number (grams)
+    - fat: number (grams)
+    
+    ${langInstruction}
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            calories: { type: Type.NUMBER },
+            protein: { type: Type.NUMBER },
+            carbs: { type: Type.NUMBER },
+            fat: { type: Type.NUMBER },
+          },
+          required: ["name", "calories", "protein", "carbs", "fat"],
+        }
+      }
+    });
+
+    const data = JSON.parse(response.text || "{}");
+    return {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      name: data.name || "Food Item",
+      calories: data.calories || 0,
+      protein: data.protein || 0,
+      carbs: data.carbs || 0,
+      fat: data.fat || 0,
+    };
+  } catch (error) {
+    console.error("Error analyzing food:", error);
+    throw new Error("Could not analyze food.");
   }
 };

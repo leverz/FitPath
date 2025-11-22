@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserProfile, Language } from '../types';
 import { translations } from '../translations';
@@ -36,7 +37,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, lang }) => {
     onComplete(formData as UserProfile);
   };
 
-  // Input Class for consistency
   const inputClass = "w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:bg-white focus:border-emerald-500 transition-all font-medium text-slate-800 placeholder:text-slate-400";
   const labelClass = "block text-sm font-bold text-slate-700 mb-2 ml-1";
 
@@ -93,6 +93,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, lang }) => {
                   className={inputClass} 
                   placeholder={lang === 'zh' ? "如: 张三" : "e.g. Alex Smith"}
                   autoFocus 
+                />
+              </div>
+              
+              <div>
+                <label className={labelClass}>{t.age}</label>
+                <input 
+                  required 
+                  type="number"
+                  name="age" 
+                  value={formData.age || ''}
+                  onChange={handleChange} 
+                  className={inputClass} 
+                  placeholder="30"
                 />
               </div>
 

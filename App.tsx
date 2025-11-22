@@ -1,12 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { UserProfile, PlanItem, ReviewResult, Language } from './types';
+import { UserProfile, PlanItem, ReviewResult, Language, FoodItem } from './types';
 import { translations } from './translations';
 import Onboarding from './components/Onboarding';
 import TimelineItem from './components/TimelineItem';
 import MorningBriefing from './components/MorningBriefing';
 import EveningReview from './components/EveningReview';
+import CalorieTracker from './components/CalorieTracker';
+import FoodLogger from './components/FoodLogger';
 import { generateDailyPlan, generateMorningBriefing, reviewDayAndAdjust } from './services/geminiService';
-import { LayoutDashboard, Loader2, RefreshCw, Globe } from 'lucide-react';
+import { db, calculateCalorieGoal } from './services/db';
+import { LayoutDashboard, Loader2, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -16,60 +20,59 @@ const App: React.FC = () => {
   const [view, setView] = useState<'onboarding' | 'dashboard' | 'review'>('onboarding');
   const [adjustment, setAdjustment] = useState<string>('');
   const [language, setLanguage] = useState<Language>('en');
+  
+  // Nutrition State
+  const [foodLogs, setFoodLogs] = useState<FoodItem[]>([]);
+  const [isFoodLoggerOpen, setIsFoodLoggerOpen] = useState(false);
 
   const t = translations[language];
 
-  // Load state from local storage on mount
+  // Initialize App State from DB
   useEffect(() => {
-    const savedProfile = localStorage.getItem('fitpath_profile');
-    const savedPlan = localStorage.getItem('fitpath_plan');
-    const savedAdjustment = localStorage.getItem('fitpath_adjustment');
-    const savedDate = localStorage.getItem('fitpath_date');
-    const savedLang = localStorage.getItem('fitpath_language') as Language;
+    const savedProfile = db.getProfile();
+    const savedPlan = db.getPlan();
+    const savedAdjustment = db.getAdjustment();
+    const savedLang = db.getLanguage();
     const today = new Date().toDateString();
 
-    if (savedLang) {
-      setLanguage(savedLang);
-    }
+    if (savedLang) setLanguage(savedLang);
 
     if (savedProfile) {
-      setProfile(JSON.parse(savedProfile));
+      setProfile(savedProfile);
       
-      if (savedPlan && savedDate === today) {
-        // Restore today's session
-        setPlan(JSON.parse(savedPlan));
+      // Load Food Logs
+      setFoodLogs(db.getFoodLogs(today));
+
+      if (savedPlan) {
+        setPlan(savedPlan);
         setView('dashboard');
       } else {
-        // Profile exists but no plan for today (or expired)
         setAdjustment(savedAdjustment || '');
-        setView('dashboard'); // Will trigger useEffect to generate
+        setView('dashboard'); // Triggers generation
       }
     }
   }, []);
 
-  // Save plan updates
+  // Persist Plan Updates
   useEffect(() => {
     if (plan.length > 0) {
-      localStorage.setItem('fitpath_plan', JSON.stringify(plan));
-      localStorage.setItem('fitpath_date', new Date().toDateString());
+      db.savePlan(plan);
     }
   }, [plan]);
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
-    localStorage.setItem('fitpath_language', lang);
+    db.setLanguage(lang);
   };
 
-  // Generate Plan Trigger
+  // Generate Plan Logic
   useEffect(() => {
     const initDay = async () => {
       if (profile && plan.length === 0 && view === 'dashboard') {
         setLoading(true);
-        // Generate Plan
         const newPlan = await generateDailyPlan(profile, adjustment, language);
         setPlan(newPlan);
         
-        // Generate Morning Briefing
         const briefing = await generateMorningBriefing(profile, newPlan, language);
         setMorningMessage(briefing);
         
@@ -80,8 +83,8 @@ const App: React.FC = () => {
   }, [profile, plan.length, view, adjustment, language]);
 
   const handleOnboardingComplete = (newProfile: UserProfile) => {
-    setProfile(newProfile);
-    localStorage.setItem('fitpath_profile', JSON.stringify(newProfile));
+    const saved = db.saveProfile(newProfile);
+    setProfile(saved);
     setView('dashboard');
   };
 
@@ -97,11 +100,21 @@ const App: React.FC = () => {
   };
 
   const startNextDay = () => {
-    // Clear current plan
+    db.clearPlan();
     setPlan([]);
     setMorningMessage(null);
     setView('dashboard');
-    localStorage.removeItem('fitpath_plan');
+    setFoodLogs([]); // Reset food logs for visual, though DB keeps history
+  };
+
+  const handleSaveFoodLog = (item: FoodItem) => {
+    const updatedLogs = db.saveFoodLog(item);
+    // Filter for today to update UI
+    const today = new Date().toDateString();
+    const todayLogs = updatedLogs.filter(
+      log => new Date(log.timestamp).toDateString() === today
+    );
+    setFoodLogs(todayLogs);
   };
 
   const LanguageSwitcher = () => (
@@ -146,19 +159,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-24">
       {/* Header */}
-      <header className="bg-white sticky top-0 z-10 border-b border-slate-100 px-6 py-4 flex justify-between items-center shadow-sm">
+      <header className="bg-white sticky top-0 z-20 border-b border-slate-100 px-6 py-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-2 text-emerald-700 font-bold text-xl">
           <LayoutDashboard size={24} />
           <span className="hidden xs:inline">{t.appTitle}</span>
         </div>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
-          <div className="text-right hidden md:block">
-            <p className="text-xs text-slate-400">{t.currentGoal}</p>
-            <p className="text-sm font-semibold text-slate-700">{profile?.targetWeight} kg</p>
-          </div>
           <button 
             onClick={() => setView('onboarding')} 
             className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200"
@@ -187,6 +196,16 @@ const App: React.FC = () => {
               />
             )}
 
+            {/* Calorie Tracker Widget */}
+            {profile && (
+              <CalorieTracker 
+                logs={foodLogs}
+                goal={profile.dailyCalorieGoal || 2000}
+                onAddFood={() => setIsFoodLoggerOpen(true)}
+                lang={language}
+              />
+            )}
+
             {/* Date Header */}
             <div className="mb-6 flex items-baseline justify-between">
               <h1 className="text-2xl font-bold text-slate-800">{t.todaySchedule}</h1>
@@ -210,7 +229,7 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            {/* Empty State Fallback */}
+            {/* Empty State */}
             {plan.length === 0 && !loading && (
               <div className="text-center py-20 text-slate-400">
                 <p>{t.noPlan}</p>
@@ -223,7 +242,7 @@ const App: React.FC = () => {
 
       {/* Floating Action Button for Review */}
       {!loading && plan.length > 0 && (
-        <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 pointer-events-none">
+        <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 pointer-events-none z-10">
           <button 
             onClick={() => setView('review')}
             className="pointer-events-auto bg-slate-900 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 hover:scale-105 transition-all flex items-center gap-2"
@@ -232,6 +251,14 @@ const App: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Food Logger Modal */}
+      <FoodLogger 
+        isOpen={isFoodLoggerOpen}
+        onClose={() => setIsFoodLoggerOpen(false)}
+        onSave={handleSaveFoodLog}
+        lang={language}
+      />
     </div>
   );
 };

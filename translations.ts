@@ -1,3 +1,4 @@
+
 export type Language = 'en' | 'zh';
 
 export const translations = {
@@ -26,6 +27,7 @@ export const translations = {
     height: "Height (cm)",
     currentWeight: "Current (kg)",
     targetWeight: "Target Weight (kg)",
+    age: "Age",
     activityLevel: "Activity Level",
     sedentary: "Sedentary",
     light: "Light",
@@ -48,6 +50,19 @@ export const translations = {
     noPlan: "No plan generated yet.",
     endDay: "End Day & Review Check-in",
     morningBriefing: "Morning Briefing",
+    
+    // Nutrition
+    addFood: "Log Meal",
+    calories: "Calories",
+    protein: "Protein",
+    carbs: "Carbs",
+    fat: "Fat",
+    whatDidYouEat: "What did you eat?",
+    describeMeal: "e.g., 2 eggs and a slice of toast",
+    analyzeFood: "Analyze Food",
+    saveLog: "Save to Log",
+    dailyIntake: "Daily Intake",
+    goal: "Goal",
     
     // Review
     eveningCheckin: "Evening Check-in",
@@ -91,6 +106,7 @@ export const translations = {
     height: "身高 (cm)",
     currentWeight: "当前体重 (kg)",
     targetWeight: "目标体重 (kg)",
+    age: "年龄",
     activityLevel: "日常活动量",
     sedentary: "久坐 (极少运动)",
     light: "轻度 (偶尔运动)",
@@ -113,6 +129,19 @@ export const translations = {
     noPlan: "尚未生成计划。",
     endDay: "结束今日 & 晚间打卡",
     morningBriefing: "早间简报",
+    
+    // Nutrition
+    addFood: "记录饮食",
+    calories: "卡路里",
+    protein: "蛋白质",
+    carbs: "碳水",
+    fat: "脂肪",
+    whatDidYouEat: "您吃了什么？",
+    describeMeal: "如：一碗牛肉面和一个鸡蛋",
+    analyzeFood: "分析营养",
+    saveLog: "保存记录",
+    dailyIntake: "今日摄入",
+    goal: "目标",
     
     // Review
     eveningCheckin: "晚间打卡",
