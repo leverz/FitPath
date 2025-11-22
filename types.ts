@@ -45,3 +45,5 @@ export interface ReviewResult {
   feedback: string;
   suggestedAdjustment: string;
 }
+
+export type Language = 'en' | 'zh';

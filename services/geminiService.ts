@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserProfile, PlanItem, ActivityType, ReviewResult } from "../types";
+import { UserProfile, PlanItem, ActivityType, ReviewResult, Language } from "../types";
+import { translations } from "../translations";
 
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
@@ -22,10 +23,14 @@ const dailyPlanSchema: Schema = {
   items: planItemSchema,
 };
 
-export const generateDailyPlan = async (profile: UserProfile, previousAdjustment?: string): Promise<PlanItem[]> => {
+export const generateDailyPlan = async (profile: UserProfile, previousAdjustment: string | undefined, lang: Language): Promise<PlanItem[]> => {
   const adjustmentPrompt = previousAdjustment 
     ? `IMPORTANT ADJUSTMENT BASED ON YESTERDAY: ${previousAdjustment}. Ensure this is strictly reflected in today's plan.` 
     : '';
+
+  const langInstruction = lang === 'zh' 
+    ? "IMPORTANT: Output all 'title' and 'description' fields strictly in Simplified Chinese (简体中文)." 
+    : "Output in English.";
 
   const prompt = `
     Create a highly personalized daily weight loss schedule for a user.
@@ -45,6 +50,7 @@ export const generateDailyPlan = async (profile: UserProfile, previousAdjustment
     3. Include 2 hydration reminders.
     4. Include specific workout/exercise slots. If the profession is sedentary, suggest active breaks. If active, suggest recovery or strength.
     5. Output JSON only.
+    6. ${langInstruction}
   `;
 
   try {
@@ -54,7 +60,7 @@ export const generateDailyPlan = async (profile: UserProfile, previousAdjustment
       config: {
         responseMimeType: "application/json",
         responseSchema: dailyPlanSchema,
-        systemInstruction: "You are an elite nutritionist and personal trainer. You create practical, highly specific plans that fit into real people's work lives. You focus on caloric deficit and macronutrient balance.",
+        systemInstruction: `You are an elite nutritionist and personal trainer. You create practical, highly specific plans that fit into real people's work lives. ${langInstruction}`,
       },
     });
 
@@ -67,14 +73,14 @@ export const generateDailyPlan = async (profile: UserProfile, previousAdjustment
     }));
   } catch (error) {
     console.error("Error generating plan:", error);
-    // Return a fallback plan if AI fails
+    const t = translations[lang];
     return [
       {
         id: 'fallback-1',
         time: profile.wakeUpTime,
         type: ActivityType.HYDRATION,
-        title: 'Morning Water',
-        description: 'Drink 500ml of water immediately after waking up.',
+        title: t.fallbackTitle,
+        description: t.fallbackDesc,
         completed: false,
         isHighlight: false,
         calories: 0
@@ -83,7 +89,11 @@ export const generateDailyPlan = async (profile: UserProfile, previousAdjustment
   }
 };
 
-export const generateMorningBriefing = async (profile: UserProfile, plan: PlanItem[]): Promise<string> => {
+export const generateMorningBriefing = async (profile: UserProfile, plan: PlanItem[], lang: Language): Promise<string> => {
+  const langInstruction = lang === 'zh' 
+    ? "Output strictly in Simplified Chinese (简体中文)." 
+    : "Output in English.";
+
   const prompt = `
     User: ${profile.name}, ${profile.profession}.
     Today's Key Tasks: ${JSON.stringify(plan.filter(p => p.isHighlight).map(p => p.title))}.
@@ -91,6 +101,7 @@ export const generateMorningBriefing = async (profile: UserProfile, plan: PlanIt
     Write a short, energetic morning greeting (max 40 words). 
     Highlight the single most important thing they need to nail today to reach their ${profile.targetWeight}kg goal.
     Be encouraging but firm.
+    ${langInstruction}
   `;
 
   try {
@@ -98,20 +109,25 @@ export const generateMorningBriefing = async (profile: UserProfile, plan: PlanIt
       model: "gemini-2.5-flash",
       contents: prompt,
     });
-    return response.text || "Rise and shine! Consistency is key today.";
+    return response.text || (lang === 'zh' ? "早安！坚持就是胜利。" : "Rise and shine! Consistency is key today.");
   } catch (error) {
-    return "Good morning! Let's make today count.";
+    return lang === 'zh' ? "早安！让我们开始这充实的一天。" : "Good morning! Let's make today count.";
   }
 };
 
 export const reviewDayAndAdjust = async (
   profile: UserProfile, 
   completedPlan: PlanItem[], 
-  userFeedback: string
+  userFeedback: string,
+  lang: Language
 ): Promise<ReviewResult> => {
   const completedTasks = completedPlan.filter(p => p.completed).length;
   const totalTasks = completedPlan.length;
   const completionRate = Math.round((completedTasks / totalTasks) * 100);
+
+  const langInstruction = lang === 'zh' 
+    ? "Output strictly in Simplified Chinese (简体中文)." 
+    : "Output in English.";
   
   const prompt = `
     Analyze today's weight loss progress.
@@ -121,6 +137,8 @@ export const reviewDayAndAdjust = async (
     
     1. 'feedback': A brief, empathetic summary of how they did (2-3 sentences). Praise consistency or offer support for misses.
     2. 'suggestedAdjustment': ONE specific, actionable change for tomorrow's plan based on today's performance and feedback. (e.g., "Add a protein snack at 3pm," "Reduce cardio intensity," "Earlier dinner").
+    
+    ${langInstruction}
   `;
 
   try {
@@ -139,9 +157,16 @@ export const reviewDayAndAdjust = async (
         }
       }
     });
-    return JSON.parse(response.text || '{"feedback": "Good job today.", "suggestedAdjustment": "Keep it up."}');
+    const fallback = lang === 'zh' 
+      ? '{"feedback": "今天做得不错。", "suggestedAdjustment": "继续保持。"}' 
+      : '{"feedback": "Good job today.", "suggestedAdjustment": "Keep it up."}';
+      
+    return JSON.parse(response.text || fallback);
   } catch (e) {
     console.error(e);
-    return { feedback: "Great effort today!", suggestedAdjustment: "Maintain current intensity." };
+    return { 
+      feedback: lang === 'zh' ? "今天很努力！" : "Great effort today!", 
+      suggestedAdjustment: lang === 'zh' ? "保持当前强度。" : "Maintain current intensity." 
+    };
   }
 };

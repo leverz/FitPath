@@ -1,13 +1,17 @@
 import React from 'react';
-import { PlanItem, ActivityType } from '../types';
+import { PlanItem, ActivityType, Language } from '../types';
+import { translations } from '../translations';
 import { CheckCircle2, Circle, Utensils, Dumbbell, Briefcase, Coffee, Moon, Droplets, Flame } from 'lucide-react';
 
 interface TimelineItemProps {
   item: PlanItem;
   onToggle: (id: string) => void;
+  lang: Language;
 }
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ item, onToggle }) => {
+const TimelineItem: React.FC<TimelineItemProps> = ({ item, onToggle, lang }) => {
+  const t = translations[lang];
+
   const getIcon = () => {
     switch (item.type) {
       case ActivityType.MEAL: return <Utensils size={18} className="text-orange-500" />;
@@ -47,7 +51,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ item, onToggle }) => {
             </span>
             {item.isHighlight && (
               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
-                Priority
+                {t.priority}
               </span>
             )}
           </div>

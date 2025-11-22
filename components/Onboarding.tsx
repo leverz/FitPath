@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../types';
-import { Activity, Briefcase, Clock, Ruler, Scale, User, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { UserProfile, Language } from '../types';
+import { translations } from '../translations';
+import { ChevronRight, Check } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
+  lang: Language;
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete, lang }) => {
+  const t = translations[lang];
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<Partial<UserProfile>>({
     wakeUpTime: '07:00',
@@ -37,6 +40,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const inputClass = "w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:bg-white focus:border-emerald-500 transition-all font-medium text-slate-800 placeholder:text-slate-400";
   const labelClass = "block text-sm font-bold text-slate-700 mb-2 ml-1";
 
+  const genders = [
+    { val: 'Male', label: t.male },
+    { val: 'Female', label: t.female },
+    { val: 'Other', label: t.other }
+  ];
+
+  const activityLevels = [
+    { val: 'sedentary', label: t.sedentary, icon: '🪑' },
+    { val: 'light', label: t.light, icon: '🚶' },
+    { val: 'moderate', label: t.moderate, icon: '🏃' },
+    { val: 'active', label: t.active, icon: '🔥' }
+  ];
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-3xl shadow-xl max-w-md w-full overflow-hidden flex flex-col min-h-[600px]">
@@ -44,8 +60,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         {/* Progress Header */}
         <div className="bg-slate-900 p-6 text-white">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-bold">FitPath AI</h1>
-            <span className="text-xs font-medium bg-slate-700 px-2 py-1 rounded-full">Step {step} of 3</span>
+            <h1 className="text-xl font-bold">{t.appTitle}</h1>
+            <span className="text-xs font-medium bg-slate-700 px-2 py-1 rounded-full">
+              {t.step} {step} {t.of} 3
+            </span>
           </div>
           <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
             <div 
@@ -61,54 +79,54 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           {step === 1 && (
             <div className="flex-1 space-y-6 animate-in slide-in-from-right duration-300">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Who are you?</h2>
-                <p className="text-slate-500">Let's get to know you better.</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.whoAreYou}</h2>
+                <p className="text-slate-500">{t.whoAreYouDesc}</p>
               </div>
 
               <div>
-                <label className={labelClass}>Your Name</label>
+                <label className={labelClass}>{t.yourName}</label>
                 <input 
                   required 
                   name="name" 
                   value={formData.name || ''}
                   onChange={handleChange} 
                   className={inputClass} 
-                  placeholder="e.g. Alex Smith"
+                  placeholder={lang === 'zh' ? "如: 张三" : "e.g. Alex Smith"}
                   autoFocus 
                 />
               </div>
 
               <div>
-                <label className={labelClass}>Gender</label>
+                <label className={labelClass}>{t.gender}</label>
                 <div className="grid grid-cols-3 gap-3">
-                  {['Male', 'Female', 'Other'].map((g) => (
+                  {genders.map((g) => (
                     <button
-                      key={g}
+                      key={g.val}
                       type="button"
-                      onClick={() => handleSelect('gender', g)}
+                      onClick={() => handleSelect('gender', g.val)}
                       className={`p-3 rounded-xl font-medium transition-all border-2 ${
-                        formData.gender === g 
+                        formData.gender === g.val 
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
                           : 'border-slate-100 bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {g}
+                      {g.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className={labelClass}>Profession</label>
+                <label className={labelClass}>{t.profession}</label>
                 <input 
                   required 
                   name="profession" 
                   value={formData.profession || ''}
                   onChange={handleChange} 
                   className={inputClass} 
-                  placeholder="e.g. Designer, Teacher, Driver" 
+                  placeholder={lang === 'zh' ? "如: 程序员, 司机, 教师" : "e.g. Designer, Teacher, Driver"} 
                 />
-                <p className="text-xs text-slate-400 mt-2 ml-1">We tailor your plan to your work schedule.</p>
+                <p className="text-xs text-slate-400 mt-2 ml-1">{t.professionDesc}</p>
               </div>
             </div>
           )}
@@ -117,13 +135,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           {step === 2 && (
             <div className="flex-1 space-y-6 animate-in slide-in-from-right duration-300">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Your Goals</h2>
-                <p className="text-slate-500">Where are you now, and where are we going?</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.yourGoals}</h2>
+                <p className="text-slate-500">{t.yourGoalsDesc}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>Height (cm)</label>
+                  <label className={labelClass}>{t.height}</label>
                   <input 
                     required 
                     type="number" 
@@ -136,7 +154,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Current (kg)</label>
+                  <label className={labelClass}>{t.currentWeight}</label>
                   <input 
                     required 
                     type="number" 
@@ -150,7 +168,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               </div>
 
               <div>
-                <label className={labelClass}>Target Weight (kg)</label>
+                <label className={labelClass}>{t.targetWeight}</label>
                 <div className="relative">
                   <input 
                     required 
@@ -168,14 +186,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               </div>
 
                <div>
-                <label className={labelClass}>Activity Level</label>
+                <label className={labelClass}>{t.activityLevel}</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { val: 'sedentary', label: 'Sedentary', icon: '🪑' },
-                    { val: 'light', label: 'Light', icon: '🚶' },
-                    { val: 'moderate', label: 'Moderate', icon: '🏃' },
-                    { val: 'active', label: 'Active', icon: '🔥' }
-                  ].map((item) => (
+                  {activityLevels.map((item) => (
                     <button
                       key={item.val}
                       type="button"
@@ -199,13 +212,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           {step === 3 && (
             <div className="flex-1 space-y-6 animate-in slide-in-from-right duration-300">
                <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Daily Routine</h2>
-                <p className="text-slate-500">Help us build your schedule.</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.dailyRoutine}</h2>
+                <p className="text-slate-500">{t.dailyRoutineDesc}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>Wake Up</label>
+                  <label className={labelClass}>{t.wakeUp}</label>
                   <input 
                     required 
                     type="time" 
@@ -216,7 +229,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Sleep</label>
+                  <label className={labelClass}>{t.sleep}</label>
                   <input 
                     required 
                     type="time" 
@@ -229,13 +242,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               </div>
 
               <div>
-                <label className={labelClass}>Dietary Preferences (Optional)</label>
+                <label className={labelClass}>{t.dietary}</label>
                 <input 
                   name="dietaryPreferences" 
                   value={formData.dietaryPreferences || ''}
                   onChange={handleChange} 
                   className={inputClass} 
-                  placeholder="Vegetarian, Keto, No Dairy..." 
+                  placeholder={lang === 'zh' ? "如：素食, 戒糖..." : "Vegetarian, Keto, No Dairy..."} 
                 />
               </div>
             </div>
@@ -249,7 +262,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 onClick={prevStep}
                 className="flex-1 py-4 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
-                Back
+                {t.back}
               </button>
             )}
             
@@ -257,18 +270,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               <button
                 type="button"
                 onClick={nextStep}
-                // Simple validation check for Step 1 & 2
                 disabled={(step === 1 && !formData.name) || (step === 2 && !formData.currentWeight)}
                 className="flex-[2] py-4 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue <ChevronRight size={20} />
+                {t.continue} <ChevronRight size={20} />
               </button>
             ) : (
               <button
                 type="submit"
                 className="flex-[2] py-4 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
               >
-                Generate My Plan <Check size={20} />
+                {t.generate} <Check size={20} />
               </button>
             )}
           </div>
